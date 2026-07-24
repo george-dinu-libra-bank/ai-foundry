@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Libra Assist — Admin Console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">L</span>
+      <div>
+        <div class="brand-title">Libra Assist</div>
+        <div class="brand-sub">RAG Admin Console</div>
+      </div>
+    </div>
+
+    <div class="conn">
+      <label class="conn-label" for="base-url">API base</label>
+      <input id="base-url" class="conn-input" type="text" spellcheck="false"
+             value="http://localhost:7799" />
+      <button id="btn-ping" class="btn btn-ghost" type="button">Check</button>
+      <span id="health-pill" class="pill pill-muted" title="Service status">
+        <span class="dot"></span><span class="pill-text">unknown</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────────────── -->
+  <nav class="tabs" role="tablist">
+    <button class="tab is-active" data-tab="status" role="tab">Status</button>
+    <button class="tab" data-tab="chunk" role="tab">1 · Chunk</button>
+    <button class="tab" data-tab="ingest" role="tab">2 · Ingest</button>
+    <button class="tab" data-tab="collection" role="tab">Collection</button>
+    <button class="tab" data-tab="search" role="tab">3 · Search</button>
+    <button class="tab" data-tab="ask" role="tab">4 · Ask</button>
+  </nav>
+
+  <main class="stage">
+
+    <!-- ── STATUS ────────────────────────────────────────────────────────── -->
+    <section id="tab-status" class="panel is-active">
+      <div class="panel-head">
+        <div>
+          <h2>Service status</h2>
+          <p class="muted">Live view of <code>/health</code> and <code>/config</code> — active providers, models, and whether Qdrant is reachable.</p>
+        </div>
+        <button id="btn-status" class="btn btn-primary" type="button">Refresh</button>
+      </div>
+      <div id="status-error" class="errbox" hidden></div>
+      <div id="status-cards" class="grid grid-3"></div>
+      <details class="raw">
+        <summary>Raw <code>/config</code></summary>
+        <pre id="status-raw" class="code"></pre>
+      </details>
+    </section>
+
+    <!-- ── CHUNK ─────────────────────────────────────────────────────────── -->
+    <section id="tab-chunk" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Chunk</h2>
+          <p class="muted">Split text and inspect the boundaries — nothing is stored. Try the same text with all four strategies.</p>
+        </div>
+      </div>
+
+      <div class="form">
+        <label class="field field-wide">
+          <span>Text</span>
+          <textarea id="chunk-text" rows="6" spellcheck="false"></textarea>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>Strategy</span>
+            <select id="chunk-strategy">
+              <option value="static">static — fixed windows</option>
+              <option value="sentence">sentence — N sentences</option>
+              <option value="dynamic" selected>dynamic — packing + overlap</option>
+              <option value="semantic">semantic — meaning-based</option>
+            </select>
+          </label>
+          <label class="field" data-when="static dynamic">
+            <span>chunk_size <em>(chars, ≥50)</em></span>
+            <input id="chunk-size" type="number" min="50" placeholder="default" />
+          </label>
+          <label class="field" data-when="static dynamic">
+            <span>chunk_overlap <em>(chars)</em></span>
+            <input id="chunk-overlap" type="number" min="0" placeholder="default" />
+          </label>
+          <label class="field" data-when="sentence">
+            <span>sentences_per_chunk</span>
+            <input id="chunk-spc" type="number" min="1" placeholder="default" />
+          </label>
+          <label class="field" data-when="semantic">
+            <span>semantic_threshold <em>(0–1)</em></span>
+            <input id="chunk-threshold" type="number" min="0" max="1" step="0.05" placeholder="default" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="btn-chunk" class="btn btn-primary" type="button">Chunk it</button>
+        </div>
+      </div>
+
+      <div id="chunk-error" class="errbox" hidden></div>
+      <div id="chunk-result"></div>
+    </section>
+
+    <!-- ── INGEST ────────────────────────────────────────────────────────── -->
+    <section id="tab-ingest" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Ingest</h2>
+          <p class="muted">Chunk → embed → store in Qdrant. See how many chunks landed, the vector dimension, and a peek at the first embedding.</p>
+        </div>
+      </div>
+
+      <div class="form">
+        <label class="field field-wide">
+          <span>Text</span>
+          <textarea id="ingest-text" rows="6" spellcheck="false"></textarea>
+        </label>
+        <div class="row">
+          <label class="field">
+            <span>Strategy</span>
+            <select id="ingest-strategy">
+              <option value="static">static</option>
+              <option value="sentence">sentence</option>
+              <option value="dynamic" selected>dynamic</option>
+              <option value="semantic">semantic</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>source <em>(label)</em></span>
+            <input id="ingest-source" type="text" placeholder="e.g. retail-faq" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-ingest" class="btn btn-primary" type="button">Ingest</button>
+        </div>
+      </div>
+
+      <div id="ingest-error" class="errbox" hidden></div>
+      <div id="ingest-result"></div>
+    </section>
+
+    <!-- ── COLLECTION ────────────────────────────────────────────────────── -->
+    <section id="tab-collection" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Collection</h2>
+          <p class="muted">What Qdrant currently holds. Reset gives you a clean slate — it is guarded by a confirm.</p>
+        </div>
+        <div class="actions">
+          <button id="btn-collection" class="btn btn-primary" type="button">Refresh</button>
+          <button id="btn-collection-del" class="btn btn-danger" type="button">Delete (reset)</button>
+        </div>
+      </div>
+
+      <div id="collection-error" class="errbox" hidden></div>
+      <div id="collection-result"></div>
+    </section>
+
+    <!-- ── SEARCH ────────────────────────────────────────────────────────── -->
+    <section id="tab-search" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Search</h2>
+          <p class="muted">Embed the query and return the nearest chunks with their cosine similarity scores — highest first.</p>
+        </div>
+      </div>
+
+      <div class="form">
+        <div class="row">
+          <label class="field field-grow">
+            <span>Query</span>
+            <input id="search-query" type="text" placeholder="my card got frozen, what do I do?" />
+          </label>
+          <label class="field field-narrow">
+            <span>top_k</span>
+            <input id="search-topk" type="number" min="1" max="50" placeholder="default" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-search" class="btn btn-primary" type="button">Search</button>
+        </div>
+      </div>
+
+      <div id="search-error" class="errbox" hidden></div>
+      <div id="search-result"></div>
+    </section>
+
+    <!-- ── ASK ───────────────────────────────────────────────────────────── -->
+    <section id="tab-ask" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Ask</h2>
+          <p class="muted">Answer a question with or without augmentation. Compare the answer and the <code>prompt_sent</code> — that difference <em>is</em> RAG.</p>
+        </div>
+      </div>
+
+      <div class="form">
+        <label class="field field-wide">
+          <span>Question</span>
+          <input id="ask-question" type="text" placeholder="What fee does Libra Bank charge for early mortgage repayment?" />
+        </label>
+        <div class="row">
+          <label class="switch">
+            <input id="ask-userag" type="checkbox" checked />
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">use_rag</span>
+          </label>
+          <label class="field field-narrow">
+            <span>top_k</span>
+            <input id="ask-topk" type="number" min="1" max="50" placeholder="default" />
+          </label>
+          <label class="field field-narrow">
+            <span>temperature <em>(0–2)</em></span>
+            <input id="ask-temp" type="number" min="0" max="2" step="0.1" placeholder="default" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-ask" class="btn btn-primary" type="button">Ask</button>
+          <button id="btn-ask-compare" class="btn btn-ghost" type="button" title="Fire the same question with use_rag off and on, side by side">Compare RAG on / off</button>
+        </div>
+      </div>
+
+      <div id="ask-error" class="errbox" hidden></div>
+      <div id="ask-result"></div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <span>Libra Bank Academy · AI Engineering on Azure</span>
+    <span class="muted">Talks only to the local API — no secrets in the browser.</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

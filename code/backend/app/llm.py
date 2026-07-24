@@ -68,15 +68,21 @@ class LLM:
             )
 
         # azure — azure-ai-inference ChatCompletionsClient
-        r = self._client.complete(
-            model=self.model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            messages=[
+        kwargs = {
+            "model": self.model,
+            "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-        )
+        }
+        # gpt-5.x / o-series reasoning models renamed the cap and only accept the
+        # default temperature; older chat models still speak the classic names.
+        if self.model.lower().startswith(("gpt-5", "o1", "o3", "o4")):
+            kwargs["model_extras"] = {"max_completion_tokens": max_tokens}
+        else:
+            kwargs["max_tokens"] = max_tokens
+            kwargs["temperature"] = temperature
+        r = self._client.complete(**kwargs)
         u = getattr(r, "usage", None)
         return ChatResult(
             text=r.choices[0].message.content or "",

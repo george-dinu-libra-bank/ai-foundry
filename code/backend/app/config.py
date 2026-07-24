@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # --- Azure Foundry --------------------------------------------------------
     azure_ai_endpoint: str = ""            # https://<resource>.services.ai.azure.com/models
-    azure_ai_auth: str = "identity"        # identity (az login / managed identity) | key
+    azure_ai_auth: str = "key"        # identity (az login / managed identity) | key
     azure_ai_api_key: str = ""             # only when azure_ai_auth=key
     azure_ai_chat_deployment: str = "gpt-5.1"
     azure_ai_embedding_deployment: str = "text-embedding-3-small"
