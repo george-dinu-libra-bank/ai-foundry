@@ -5,7 +5,32 @@ from typing import Literal, Optional  # noqa: F401  (Literal used by AskRequest)
 
 from pydantic import BaseModel, Field
 
-Strategy = Literal["static", "dynamic", "sentence", "semantic"]
+Strategy = Literal["static", "dynamic", "sentence", "semantic", "markdown"]
+
+
+class RetrievalOptions(BaseModel):
+    """The retrieval dials added in Assignment 3, part 5. Shared by /search and
+    /ask so the two behave identically — a question answered well in /search and
+    badly in /ask is a bug in the plumbing, not in retrieval."""
+
+    min_score: Optional[float] = Field(
+        None, ge=0, le=1,
+        description="Drop hits below this cosine score. Nothing above the floor means "
+                    "'nothing relevant found' — which is a legitimate answer.",
+    )
+    filters: Optional[dict] = Field(
+        None,
+        description="Payload filters, e.g. {\"status\": \"current\"} to exclude superseded "
+                    "documents, or {\"product\": [\"cards\"]}. A list matches any of its values.",
+    )
+    hybrid: Optional[bool] = Field(
+        None,
+        description="Add a keyword arm over the full-text index and fuse it with the vector "
+                    "arm (RRF). Finds exact tokens — amounts, phone numbers, years.",
+    )
+    dedup: Optional[bool] = Field(
+        None, description="Collapse near-identical chunks so one fact cannot fill the context",
+    )
 
 
 # --- chunking -----------------------------------------------------------------
@@ -21,6 +46,11 @@ class ChunkRequest(BaseModel):
 
     text: str = Field(..., description="Raw text to split", min_length=1)
     strategy: Optional[Strategy] = Field(None, description="Defaults to CHUNK_STRATEGY from .env")
+    title: Optional[str] = Field(
+        None,
+        description="Document title — the 'markdown' strategy prefixes every chunk with "
+                    "'[title › heading path]' so a chunk retrieved alone still says what it is about",
+    )
     chunk_size: Optional[int] = Field(None, ge=50, description="Target size, characters (≥ 50)")
     chunk_overlap: Optional[int] = Field(None, ge=0, description="Overlap, characters")
     sentences_per_chunk: Optional[int] = Field(None, ge=1, description="'sentence' strategy only")
@@ -52,6 +82,18 @@ class IngestRequest(ChunkRequest):
     }]}}
 
     source: Optional[str] = Field(None, description="Label stored with every chunk (e.g. 'cards-faq')")
+    metadata: Optional[dict] = Field(
+        None,
+        description="Document metadata stored on every chunk's payload — title, product, "
+                    "audience, effective, version, status. Nothing can be filtered by what "
+                    "was never stored, so the loader sends the whole YAML header here.",
+    )
+    prune: bool = Field(
+        True,
+        description="After upserting, delete leftover chunks of this source with a higher "
+                    "index. Needed when a document shrinks: stable ids overwrite chunks "
+                    "0..n-1, but chunks n.. from the previous version would survive.",
+    )
 
 
 class IngestResponse(BaseModel):
@@ -62,13 +104,27 @@ class IngestResponse(BaseModel):
     embedding_model: dict
     point_ids: list[str]
     chunks: list[ChunkInfo]
+    source: Optional[str] = None
+    metadata: dict = Field(default_factory=dict, description="What was stored on every chunk")
+    pruned: int = Field(0, description="Stale chunks removed from a previous, longer version")
+    replaced: bool = Field(
+        False, description="True when this source already existed — ids are stable, so this "
+                           "was a replacement rather than a duplication",
+    )
 
 
 # --- retrieval ----------------------------------------------------------------
-class SearchRequest(BaseModel):
+class SearchRequest(RetrievalOptions):
     model_config = {"json_schema_extra": {"examples": [{
         "query": "my card got frozen, what do I do?",
         "top_k": 3,
+    }, {
+        "query": "how much cash can I take out of an ATM per day?",
+        "top_k": 4,
+        "min_score": 0.3,
+        "filters": {"status": "current"},
+        "hybrid": True,
+        "dedup": True,
     }]}}
 
     query: str = Field(..., min_length=1)
@@ -82,6 +138,34 @@ class SearchHit(BaseModel):
     strategy: Optional[str] = None
     source: Optional[str] = None
     id: str
+    # --- document metadata, stored at ingest (part 4, improvement #2) ---------
+    title: Optional[str] = None
+    product: Optional[str] = None
+    audience: Optional[str] = None
+    effective: Optional[str] = Field(None, description="Date this document started applying")
+    version: Optional[int] = None
+    status: Optional[str] = Field(None, description="current | superseded")
+    # --- hybrid bookkeeping (part 5, improvement #3) --------------------------
+    rrf: Optional[float] = Field(None, description="Fused rank score, when hybrid search ran")
+    matched: list[str] = Field(
+        default_factory=list, description="Which arms found this chunk: dense, lexical, or both",
+    )
+
+
+class RetrievalReport(BaseModel):
+    """What retrieval actually did — so a thin answer can be explained rather than
+    guessed at. The frontend shows this verbatim."""
+
+    min_score: Optional[float] = None
+    filters: dict = Field(default_factory=dict)
+    hybrid: bool = False
+    dedup: bool = False
+    candidates: int = Field(0, description="Hits before the floor, dedup and top_k cut")
+    kept: int = Field(0, description="Hits that survived and were sent to the model")
+    nothing_relevant: bool = Field(
+        False, description="True when every candidate fell below min_score — the honest "
+                           "'I found nothing' the assistant must be able to say",
+    )
 
 
 class SearchResponse(BaseModel):
@@ -90,15 +174,25 @@ class SearchResponse(BaseModel):
     embedding_model: dict
     query_embedding_preview: list[float]
     hits: list[SearchHit]
+    retrieval: Optional[RetrievalReport] = None
 
 
 # --- generation ---------------------------------------------------------------
-class AskRequest(BaseModel):
+class AskRequest(RetrievalOptions):
     model_config = {"json_schema_extra": {"examples": [{
         "question": "What fee does Libra Bank charge for early mortgage repayment?",
         "use_rag": True,
         "top_k": 3,
         "agent": "lyrical",
+    }, {
+        "question": "How much cash can I withdraw from an ATM in one day?",
+        "use_rag": True,
+        "top_k": 4,
+        "agent": "teller",
+        "min_score": 0.3,
+        "filters": {"status": "current"},
+        "hybrid": True,
+        "dedup": True,
     }]}}
 
     question: str = Field(..., min_length=1)
@@ -221,6 +315,10 @@ class AskResponse(BaseModel):
     system_prompt: str = Field(description="The system message actually sent")
     prompt_sent: str = Field(description="The exact user prompt sent to the model — compare with/without RAG")
     retrieved: list[SearchHit] = Field(default_factory=list)
+    retrieval: Optional[RetrievalReport] = Field(
+        None, description="What retrieval did, when use_rag was true — including whether it "
+                          "found nothing above the score floor",
+    )
     usage: Optional[Usage] = None
 
 

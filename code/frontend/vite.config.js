@@ -12,7 +12,7 @@ const target = process.env.VITE_API_TARGET || 'http://localhost:7799'
 // Every backend route the console uses. Proxied so there is no CORS to configure.
 const ROUTES = [
   '/health', '/config', '/azure',
-  '/chunk', '/ingest', '/collection', '/search', '/ask',
+  '/chunk', '/ingest', '/collection', '/sources', '/search', '/ask',
   '/agents', '/tools',
 ]
 

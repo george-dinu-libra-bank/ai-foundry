@@ -30,10 +30,31 @@ class AgentReply:
     completion_tokens: int | None = None
 
 
-def build_user_prompt(question: str, chunks: list[dict]) -> str:
-    """Question alone, or question + retrieved passages."""
+EMPTY_CONTEXT = (
+    "CONTEXT — retrieved passages:\n"
+    "(none — the search ran against the bank's documents and nothing passed the "
+    "relevance threshold)\n\n"
+    "The knowledge base has no passage covering this question. Say so plainly and "
+    "do not answer from general knowledge: an invented answer here is worse than "
+    "no answer. Name what the customer could ask instead, if anything in scope is "
+    "close.\n\n"
+    "QUESTION:\n"
+)
+
+
+def build_user_prompt(question: str, chunks: list[dict],
+                      retrieval_attempted: bool = False) -> str:
+    """Question alone, question + retrieved passages, or question + an explicit
+    statement that retrieval found nothing.
+
+    That third case is the one that matters. Without it, a question whose answer is
+    not in the corpus arrives at the model as a bare question with an ungrounded
+    system prompt — and the model answers it confidently from what it happens to
+    know about banking. Retrieval having found nothing is *information*, and the
+    model has to be told.
+    """
     if not chunks:
-        return question
+        return (EMPTY_CONTEXT + question) if retrieval_attempted else question
     context = "\n\n".join(
         f"[{i + 1}] (score {c['score']}) {c['text']}" for i, c in enumerate(chunks)
     )
@@ -50,10 +71,13 @@ def run(
     question: str,
     chunks: list[dict] | None = None,
     temperature: float | None = None,
+    retrieval_attempted: bool = False,
 ) -> AgentReply:
     chunks = chunks or []
-    system = persona.system_prompt(grounded=bool(chunks))
-    user = build_user_prompt(question, chunks)
+    # an empty result from a search that *ran* is still a grounded turn: the
+    # persona's refusal rules must apply precisely when there is nothing to cite
+    system = persona.system_prompt(grounded=bool(chunks) or retrieval_attempted)
+    user = build_user_prompt(question, chunks, retrieval_attempted)
 
     # precedence: explicit request value > persona file > .env default
     temp = temperature if temperature is not None else (

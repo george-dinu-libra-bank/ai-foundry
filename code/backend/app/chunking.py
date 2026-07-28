@@ -1,6 +1,6 @@
 """Chunking strategies — the first decision of every RAG pipeline, made visible.
 
-Four strategies, deliberately spanning the sophistication spectrum:
+Five strategies, deliberately spanning the sophistication spectrum:
 
   static    fixed character windows; cheap, ignores meaning (splits mid-sentence)
   sentence  groups of N sentences; trivially readable boundaries
@@ -8,6 +8,12 @@ Four strategies, deliberately spanning the sophistication spectrum:
             budget with overlap; never cuts inside a sentence unless forced
   semantic  sentence embeddings; a new chunk starts where adjacent cosine
             similarity drops below a threshold — meaning-aware, costs embeddings
+  markdown  heading-aware: sections become chunks, tables and numbered lists are
+            atomic blocks that are never cut, and every chunk carries a
+            "document title › heading path" breadcrumb (Assignment 3, part 4)
+
+`markdown` is the strategy this project actually ingests with. The other four are
+kept because comparing against them is how the improvement gets measured.
 """
 from __future__ import annotations
 
@@ -17,6 +23,12 @@ from typing import Callable
 
 SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
 PARAGRAPH_SPLIT = re.compile(r"\n\s*\n")
+
+# --- markdown structure -------------------------------------------------------
+HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
+TABLE_ROW = re.compile(r"^\s*\|")
+LIST_ITEM = re.compile(r"^\s*(?:\d+[.)]|[-*+])\s+")
+FRONT_MATTER = re.compile(r"\A---\s*\n.*?\n---\s*\n", re.DOTALL)
 
 EmbedFn = Callable[[list[str]], list[list[float]]]
 
@@ -110,9 +122,138 @@ def chunk_semantic(text: str, threshold: float, embed_fn: EmbedFn) -> list[str]:
     return [" ".join(c) for c in chunks]
 
 
+# --- markdown: heading-aware, table- and list-safe -----------------------------
+
+def strip_front_matter(text: str) -> str:
+    """Remove a leading YAML block. The loader parses it into metadata; leaving it
+    in the text would embed `effective: 2026-01-01` as if it were prose."""
+    return FRONT_MATTER.sub("", text, count=1)
+
+
+def _blocks(lines: list[str]) -> list[str]:
+    """Group lines into atomic blocks: a table, a list, or a paragraph.
+
+    A table is consecutive `|`-rows; a list is consecutive items plus their
+    indented continuation lines. These are the two shapes that lose their meaning
+    when cut — a table row without its header row is a number with no name.
+    """
+    out: list[str] = []
+    buf: list[str] = []
+    kind: str | None = None
+
+    def flush() -> None:
+        nonlocal buf, kind
+        if buf:
+            body = "\n".join(buf).strip()
+            if body:
+                out.append(body)
+        buf, kind = [], None
+
+    for line in lines:
+        if not line.strip():
+            # a blank line ends a paragraph, but not a table or a list
+            if kind in ("table", "list"):
+                buf.append(line)
+            else:
+                flush()
+            continue
+        if TABLE_ROW.match(line):
+            this = "table"
+        elif LIST_ITEM.match(line):
+            this = "list"
+        elif kind == "list" and line.startswith((" ", "\t")):
+            this = "list"                      # continuation of the current item
+        else:
+            this = "paragraph"
+        if kind is not None and this != kind:
+            flush()
+        kind = this
+        buf.append(line)
+    flush()
+    return out
+
+
+def _breadcrumb(title: str | None, path: list[str]) -> str:
+    """"Document title › section › subsection", with repetition removed.
+
+    Documents normally open with an H1 that repeats the title from the header,
+    which would otherwise produce "Card fee schedule 2026 › Card fee schedule
+    2026 › Cash withdrawal" on every chunk — tokens spent saying nothing.
+    """
+    parts = ([title] if title else []) + path
+    out: list[str] = []
+    for p in parts:
+        if p and (not out or p.strip().casefold() != out[-1].strip().casefold()):
+            out.append(p.strip())
+    return " › ".join(out)
+
+
+def chunk_markdown(text: str, size: int, title: str | None = None) -> list[str]:
+    """Split on Markdown headings, pack atomic blocks up to `size`, and prefix
+    every chunk with its document title and heading path.
+
+    Three deliberate choices, each answering a failure seen in `data/`:
+
+      * the heading stays with its text, so "## Minimum payment" is not orphaned
+        from the 5%-or-50-lei rule underneath it;
+      * a table or a numbered list is never cut, even when it alone exceeds
+        `size` — an intact oversized chunk beats two meaningless ones;
+      * the breadcrumb makes a chunk self-describing, so a fee retrieved alone
+        still says which document and which section it came from.
+    """
+    text = strip_front_matter(text).strip()
+    if not text:
+        return []
+
+    # walk the document, accumulating (heading path, lines) sections
+    sections: list[tuple[list[str], list[str]]] = []
+    path: list[str] = []
+    body: list[str] = []
+    for line in text.splitlines():
+        m = HEADING.match(line)
+        if not m:
+            body.append(line)
+            continue
+        if body:
+            sections.append((list(path), body))
+            body = []
+        level, heading = len(m.group(1)), m.group(2).strip()
+        path = path[: level - 1] + [heading]
+    if body:
+        sections.append((list(path), body))
+
+    chunks: list[str] = []
+    for path, lines in sections:
+        blocks = _blocks(lines)
+        if not blocks:
+            continue
+        crumb = _breadcrumb(title, path)
+        prefix = f"[{crumb}]\n\n" if crumb else ""
+        budget = max(1, size - len(prefix))
+
+        current: list[str] = []
+        current_len = 0
+        for block in blocks:
+            # an atomic block bigger than the budget gets its own chunk, intact
+            if len(block) > budget:
+                if current:
+                    chunks.append(prefix + "\n\n".join(current))
+                    current, current_len = [], 0
+                chunks.append(prefix + block)
+                continue
+            if current and current_len + len(block) + 2 > budget:
+                chunks.append(prefix + "\n\n".join(current))
+                current, current_len = [], 0
+            current.append(block)
+            current_len += len(block) + 2
+        if current:
+            chunks.append(prefix + "\n\n".join(current))
+    return chunks
+
+
 # --- dispatcher ---------------------------------------------------------------
 
-STRATEGIES = ("static", "dynamic", "sentence", "semantic")
+STRATEGIES = ("static", "dynamic", "sentence", "semantic", "markdown")
 
 
 def chunk(
@@ -124,6 +265,7 @@ def chunk(
     per_chunk: int,
     threshold: float,
     embed_fn: EmbedFn | None = None,
+    title: str | None = None,
 ) -> list[str]:
     text = text.strip()
     if not text:
@@ -134,6 +276,8 @@ def chunk(
         return chunk_sentence(text, per_chunk)
     if strategy == "dynamic":
         return chunk_dynamic(text, size, overlap)
+    if strategy == "markdown":
+        return chunk_markdown(text, size, title)
     if strategy == "semantic":
         if embed_fn is None:
             raise ValueError("semantic chunking requires an embedding function")

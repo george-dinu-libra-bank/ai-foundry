@@ -18,9 +18,9 @@ from .llm import get_llm
 from .schemas import (
     AgentInfo, AgentListResponse, AskRequest, AskResponse, AzureDeployment, AzureDeployments,
     AzureStatus, ChunkInfo, ChunkRequest, ChunkResponse, CollectionInfo, FoundryAvailability,
-    Health, HostedAgent, IngestRequest, IngestResponse, PersonaSummary, ScrapeRequest,
-    ScrapeResponse, SearchHit, SearchRequest, SearchResponse, SpeakRequest,
-    TranscribeResponse, Usage,
+    Health, HostedAgent, IngestRequest, IngestResponse, PersonaSummary, RetrievalOptions,
+    RetrievalReport, ScrapeRequest, ScrapeResponse, SearchHit, SearchRequest, SearchResponse,
+    SpeakRequest, TranscribeResponse, Usage,
 )
 from .services import speech, web
 from .vectorstore import DimensionMismatch, VectorStore
@@ -62,10 +62,47 @@ def _do_chunk(req: ChunkRequest) -> tuple[list[str], dict]:
         pieces = chunking.chunk(
             req.text, p["strategy"], size=p["size"], overlap=p["overlap"],
             per_chunk=p["per_chunk"], threshold=p["threshold"], embed_fn=embed_fn,
+            title=req.title,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return pieces, p
+
+
+def _retrieve(query: str, top_k: int,
+              opts: RetrievalOptions) -> tuple[list[SearchHit], RetrievalReport, list[float]]:
+    """One retrieval path for /search and /ask.
+
+    Assignment 3, part 5 lives here: a score floor, payload filters, a keyword arm
+    fused with the vector arm, and deduplication. Everything defaults to the value
+    in .env, so the behaviour of a bare request is a deployment decision rather
+    than a client one.
+    """
+    min_score = opts.min_score if opts.min_score is not None else settings.retrieval_min_score
+    hybrid = opts.hybrid if opts.hybrid is not None else settings.retrieval_hybrid
+    dedup = opts.dedup if opts.dedup is not None else settings.retrieval_dedup
+    filters = dict(opts.filters or {})
+    if not filters and settings.retrieval_current_only:
+        filters = {"status": "current"}
+
+    qvec = _embed([query])[0]
+    # unfiltered candidate count, so "nothing relevant" can be distinguished from
+    # "the filter excluded everything" when explaining a thin answer
+    candidates = store.search(qvec, top_k, filters=filters or None)
+    hits = store.search(
+        qvec, top_k,
+        min_score=min_score if min_score > 0 else None,
+        filters=filters or None,
+        query_text=query if hybrid else None,
+        dedup=dedup,
+    )
+    report = RetrievalReport(
+        min_score=min_score if min_score > 0 else None,
+        filters=filters, hybrid=hybrid, dedup=dedup,
+        candidates=len(candidates), kept=len(hits),
+        nothing_relevant=bool(candidates) and not hits,
+    )
+    return [SearchHit(**h) for h in hits], report, qvec
 
 
 def _chunk_infos(pieces: list[str]) -> list[ChunkInfo]:
@@ -140,7 +177,11 @@ def config() -> dict:
                      "sentences_per_chunk": settings.sentences_per_chunk,
                      "semantic_threshold": settings.semantic_threshold},
         "retrieval": {"top_k": settings.top_k, "collection": settings.qdrant_collection,
-                      "qdrant_url": settings.qdrant_url},
+                      "qdrant_url": settings.qdrant_url,
+                      "min_score": settings.retrieval_min_score,
+                      "hybrid": settings.retrieval_hybrid,
+                      "dedup": settings.retrieval_dedup,
+                      "current_only": settings.retrieval_current_only},
         "generation": {"provider": settings.llm_provider,
                        "temperature": settings.llm_temperature,
                        "max_tokens": settings.llm_max_tokens},
@@ -269,11 +310,21 @@ def ingest(req: IngestRequest) -> IngestResponse:
         store.ensure_collection(dim)
     except DimensionMismatch as e:
         raise HTTPException(status_code=409, detail=str(e))
-    ids = store.upsert(pieces, vectors, p["strategy"], req.source)
+    store.ensure_indexes()
+
+    source = req.source or "adhoc"
+    existed = store.count(source) > 0
+    metadata = {k: v for k, v in (req.metadata or {}).items() if v is not None}
+    ids = store.upsert(pieces, vectors, p["strategy"], source, metadata)
+    # ids are stable, so chunks 0..n-1 were replaced in place; anything above n is
+    # a leftover from a longer previous version of the same document
+    pruned = store.prune_source(source, len(pieces)) if req.prune else 0
+
     return IngestResponse(
         strategy=p["strategy"], count=len(pieces), vector_dimension=dim,
         embedding_preview=[round(x, 5) for x in vectors[0][:8]],
         embedding_model=_embedder().describe(), point_ids=ids, chunks=_chunk_infos(pieces),
+        source=source, metadata=metadata, pruned=pruned, replaced=existed,
     )
 
 
@@ -290,21 +341,45 @@ def collection_reset() -> dict:
     return {"deleted": store.reset(), "collection": settings.qdrant_collection}
 
 
+@app.get("/sources", tags=["2 · ingestion"])
+def sources() -> dict:
+    """Every document in the collection, with its chunk count and metadata.
+
+    Only meaningful because ingestion now stores metadata and derives point ids
+    from the source — before that, this list grew every time the loader ran.
+    """
+    _require_qdrant()
+    items = store.sources()
+    return {"count": len(items), "chunks": sum(i["chunks"] for i in items), "sources": items}
+
+
+@app.delete("/sources/{source}", tags=["2 · ingestion"])
+def source_delete(source: str) -> dict:
+    """Remove one document without wiping the collection — re-ingest a single
+    file after editing it, instead of rebuilding everything."""
+    _require_qdrant()
+    return {"source": source, "deleted_chunks": store.delete_by_source(source)}
+
+
 # --- retrieval ----------------------------------------------------------------
 @app.post("/search", response_model=SearchResponse, tags=["3 · retrieval"])
 def search(req: SearchRequest) -> SearchResponse:
     """Embed the query, return the nearest chunks with their cosine similarity
-    scores — retrieval with the curtain open."""
+    scores — retrieval with the curtain open.
+
+    Four optional dials, each fixing something the bare version gets wrong:
+    `min_score`, `filters`, `hybrid` and `dedup`. The `retrieval` block in the
+    response says which ran and what they discarded.
+    """
     _require_qdrant()
     if not store.info()["exists"]:
         raise HTTPException(status_code=404, detail="Collection is empty — POST /ingest first.")
     top_k = req.top_k or settings.top_k
-    qvec = _embed([req.query])[0]
-    hits = store.search(qvec, top_k)
+    hits, report, qvec = _retrieve(req.query, top_k, req)
     return SearchResponse(
         query=req.query, top_k=top_k, embedding_model=_embedder().describe(),
         query_embedding_preview=[round(x, 5) for x in qvec[:8]],
-        hits=[SearchHit(**h) for h in hits],
+        hits=hits, retrieval=report,
     )
 
 
@@ -321,6 +396,7 @@ def ask(req: AskRequest) -> AskResponse:
     `system_prompt` and `prompt_sent` always show exactly what went to the model.
     """
     retrieved: list[SearchHit] = []
+    report: RetrievalReport | None = None
 
     # ---- which persona, and does it need to be local? ------------------------
     persona_name = req.agent or settings.agent_persona
@@ -349,8 +425,7 @@ def ask(req: AskRequest) -> AskResponse:
                                 detail="use_rag=true but the collection is empty — POST /ingest first, "
                                        "or set use_rag=false for a plain LLM answer.")
         top_k = req.top_k or settings.top_k
-        qvec = _embed([req.question])[0]
-        retrieved = [SearchHit(**h) for h in store.search(qvec, top_k)]
+        retrieved, report, _ = _retrieve(req.question, top_k, req)
 
     chunks = [h.model_dump() for h in retrieved]
     mode = mode_requested
@@ -362,7 +437,8 @@ def ask(req: AskRequest) -> AskResponse:
         elif mode == "foundry":
             reply = foundry_agent.run(persona, req.question, chunks)
         else:
-            reply = local_agent.run(persona, req.question, chunks, temperature=req.temperature)
+            reply = local_agent.run(persona, req.question, chunks, temperature=req.temperature,
+                                    retrieval_attempted=req.use_rag)
     except foundry_agent.FoundryUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
@@ -388,6 +464,7 @@ def ask(req: AskRequest) -> AskResponse:
         system_prompt=reply.system_prompt,
         prompt_sent=reply.prompt_sent,
         retrieved=retrieved,
+        retrieval=report,
         usage=Usage(prompt_tokens=reply.prompt_tokens, completion_tokens=reply.completion_tokens),
     )
 

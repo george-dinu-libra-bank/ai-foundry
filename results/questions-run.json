@@ -1,0 +1,419 @@
+[
+  {
+    "id": "A1",
+    "group": "A",
+    "question": "After how many wrong PIN attempts is my card blocked?",
+    "expected": "Three consecutive failed PIN attempts.",
+    "why_hard": null,
+    "expected_sources": [
+      "card-blocking-unblocking",
+      "pin-management"
+    ],
+    "retrieved_sources": [
+      "pin-management",
+      "card-blocking-unblocking",
+      "lost-or-stolen-card",
+      "card-blocking-unblocking"
+    ],
+    "sources_found": [
+      "card-blocking-unblocking",
+      "pin-management"
+    ],
+    "sources_missing": [],
+    "top_score": 0.7504,
+    "nothing_relevant": false,
+    "answer": "Your card is automatically blocked after three consecutive failed PIN attempts at an ATM or POS terminal [1][2].\n\nThe failed-attempt counter resets to zero after any successful PIN entry, so entering the correct PIN before the third wrong try prevents a block [2].",
+    "verdict": "correct",
+    "prompt_tokens": 773,
+    "completion_tokens": 318,
+    "seconds": 5.1
+  },
+  {
+    "id": "A2",
+    "group": "A",
+    "question": "What is the monthly maintenance fee for a Libra Plus Debit card?",
+    "expected": "5.00 lei per month in 2026 (it was 7.00 in 2025), waived if monthly card spend is at least 1,000 lei.",
+    "why_hard": null,
+    "expected_sources": [
+      "fee-schedule-2026"
+    ],
+    "retrieved_sources": [
+      "fee-schedule-2026",
+      "virtual-cards",
+      "card-eligibility",
+      "fee-schedule-2026",
+      "card-eligibility",
+      "card-eligibility"
+    ],
+    "sources_found": [
+      "fee-schedule-2026"
+    ],
+    "sources_missing": [],
+    "top_score": 0.7586,
+    "nothing_relevant": false,
+    "answer": "The monthly maintenance fee for a Libra Plus Debit card is 5.00; this fee is waived if the cardholder's monthly card spend is at least 1,000 ([Card fee schedule 2026 \u203a Monthly maintenance] [1]).\n\nThis replaced the previous 7.00 fee and the previous 1,500 spend waiver threshold, per the same schedule [1].",
+    "verdict": "correct",
+    "prompt_tokens": 686,
+    "completion_tokens": 471,
+    "seconds": 5.8
+  },
+  {
+    "id": "A3",
+    "group": "A",
+    "question": "How much cash can I withdraw from an ATM per day with a Standard Debit card?",
+    "expected": "8,000 lei per day under the 2026 limits.",
+    "why_hard": null,
+    "expected_sources": [
+      "daily-limits-2026"
+    ],
+    "retrieved_sources": [
+      "daily-limits-2026",
+      "daily-limits-2026",
+      "daily-limits-2026",
+      "card-products-overview",
+      "fee-schedule-2026",
+      "daily-limits-2026"
+    ],
+    "sources_found": [
+      "daily-limits-2026"
+    ],
+    "sources_missing": [],
+    "top_score": 0.6002,
+    "nothing_relevant": false,
+    "answer": "The standard ATM cash withdrawal limit for a Libra Standard Debit card is 8,000 lei per day [1].\n\nYou can request a temporary one\u2011day increase up to 20,000 lei via the mobile app (Cards \u2192 Limits \u2192 Temporary increase) or by calling Card Support; it applies for 24 hours from approval, can be requested up to three times per calendar month with no fee [2]. Daily limits are counted over a calendar day in Romanian time (00:00\u201323:59) and reset at midnight [3].",
+    "verdict": "correct",
+    "prompt_tokens": 773,
+    "completion_tokens": 439,
+    "seconds": 5.5
+  },
+  {
+    "id": "A4",
+    "group": "A",
+    "question": "What annual interest rate applies to cash withdrawals on the Gold Credit card?",
+    "expected": "28.9% for cash withdrawals (22.9% for purchases), with no interest-free period on cash.",
+    "why_hard": null,
+    "expected_sources": [
+      "credit-card-repayment"
+    ],
+    "retrieved_sources": [
+      "credit-card-repayment",
+      "card-products-overview",
+      "credit-card-repayment"
+    ],
+    "sources_found": [
+      "credit-card-repayment"
+    ],
+    "sources_missing": [],
+    "top_score": 0.8236,
+    "nothing_relevant": false,
+    "answer": "The annual interest rate for cash withdrawals on the Gold Credit card is 28.9% [1].\n\nCash withdrawals do not have an interest-free period; interest on a cash withdrawal runs from the day of the withdrawal [3].",
+    "verdict": "correct",
+    "prompt_tokens": 483,
+    "completion_tokens": 248,
+    "seconds": 4.0
+  },
+  {
+    "id": "A5",
+    "group": "A",
+    "question": "How long does standard delivery of a replacement card take?",
+    "expected": "5 to 7 working days by post; express courier is 2 working days and branch collection 3.",
+    "why_hard": null,
+    "expected_sources": [
+      "card-replacement-procedure"
+    ],
+    "retrieved_sources": [
+      "card-replacement-procedure",
+      "card-replacement-procedure",
+      "card-replacement-procedure",
+      "digital-wallets",
+      "lost-or-stolen-card",
+      "fee-schedule-2026"
+    ],
+    "sources_found": [
+      "card-replacement-procedure"
+    ],
+    "sources_missing": [],
+    "top_score": 0.6055,
+    "nothing_relevant": false,
+    "answer": "Standard delivery is by post to the address on file and takes 5 to 7 working days [1].\n\nConfirm or update the delivery address before ordering a replacement card \u2014 skipping that step is the most common cause of a card being sent to an old address [1][2].",
+    "verdict": "correct",
+    "prompt_tokens": 1276,
+    "completion_tokens": 322,
+    "seconds": 4.3
+  },
+  {
+    "id": "A6",
+    "group": "A",
+    "question": "How long do I have to dispute a card transaction?",
+    "expected": "13 months from the transaction date, and no later than 60 days after an unauthorised transaction appeared on the statement.",
+    "why_hard": null,
+    "expected_sources": [
+      "disputed-transactions"
+    ],
+    "retrieved_sources": [
+      "disputed-transactions",
+      "disputed-transactions",
+      "card-closure",
+      "disputed-transactions",
+      "disputed-transactions",
+      "disputed-transactions"
+    ],
+    "sources_found": [
+      "disputed-transactions"
+    ],
+    "sources_missing": [],
+    "top_score": 0.6862,
+    "nothing_relevant": false,
+    "answer": "You must raise a dispute within 13 months of the transaction date [1].  \n\nFor suspected unauthorised transactions there\u2019s a tighter rule: you must report it without undue delay and no later than 60 days after the transaction appeared on your statement, otherwise the bank may refuse the provisional refund even if the underlying claim is valid [1].",
+    "verdict": "correct",
+    "prompt_tokens": 983,
+    "completion_tokens": 399,
+    "seconds": 4.6
+  },
+  {
+    "id": "A7",
+    "group": "A",
+    "question": "Can I use a virtual card to withdraw cash from an ATM?",
+    "expected": "No. A virtual card cannot withdraw cash, and cardless ATM withdrawal is not available for it either.",
+    "why_hard": null,
+    "expected_sources": [
+      "virtual-cards"
+    ],
+    "retrieved_sources": [
+      "virtual-cards",
+      "card-products-overview",
+      "virtual-cards",
+      "card-replacement-procedure",
+      "foreign-currency-and-travel",
+      "virtual-cards"
+    ],
+    "sources_found": [
+      "virtual-cards"
+    ],
+    "sources_missing": [],
+    "top_score": 0.5666,
+    "nothing_relevant": false,
+    "answer": "No. A Libra Virtual card cannot withdraw cash \u2014 there is no plastic to insert in an ATM, and it cannot be used for cardless ATM withdrawals either [1].\n\nIf you need cash, use your physical (parent) card or arrange for a physical replacement; the virtual card is intended for online and wallet/contactless spending while a replacement is in the post [1][3][4].",
+    "verdict": "correct",
+    "prompt_tokens": 663,
+    "completion_tokens": 601,
+    "seconds": 8.3
+  },
+  {
+    "id": "B1",
+    "group": "B",
+    "question": "My net monthly income is 3,800 lei. Which Libra cards am I eligible for, and what would each cost me per month?",
+    "expected": "Standard Debit (no income condition) at 3.00 lei/month and Gold Credit (needs 3,500 lei) at 15.00 lei/month. NOT Plus Debit, which needs 4,000 lei net income.",
+    "why_hard": "Eligibility and price are in different documents on purpose, and the answer turns on 3,800 falling below one threshold and above another.",
+    "expected_sources": [
+      "card-eligibility",
+      "fee-schedule-2026"
+    ],
+    "retrieved_sources": [
+      "card-eligibility",
+      "card-activation",
+      "card-eligibility",
+      "card-blocking-unblocking",
+      "fee-schedule-2026",
+      "lost-or-stolen-card"
+    ],
+    "sources_found": [
+      "card-eligibility",
+      "fee-schedule-2026"
+    ],
+    "sources_missing": [],
+    "top_score": 0.7061,
+    "nothing_relevant": false,
+    "answer": "With a net monthly income of 3,800 lei you meet the income threshold for Libra Gold Credit (requires \u22653,500 lei) but you must also meet the other Gold criteria: age \u226518, a payslip or tax statement \u226460 days old, a clean Credit Bureau record (no payment >30 days late in the last 12 months) and total debt service <40% of net income after the new card is included [1]. You do NOT meet the income-only threshold for Libra Plus Debit (requires \u22654,000 lei credited to a Libra account for the last 3 months) \u2014 you could still qualify for Plus if you instead meet the alternative condition (average current-account balance >10,000 lei over the last 6 months); I do not have information about your account balance or whether your income is credited to a Libra account, so I cannot confirm Plus eligibility [3].\n\nMonthly maintenance fees: Libra Gold Credit costs 15.00 lei/month (waived if monthly card spend \u2265 3,000), Libra Plus Debit costs 5.00 lei/month (waived if monthly card spend \u2265 1,000), and Libra Standard Debit costs 3.00 lei/month (waived if monthly card spend \u2265 500) \u2014 see fee schedule [5]. If you want a definitive list of cards you qualify for, please tell me (a) whether your salary is credited to a Libra account for the last 3 months, and (b) your current-account average balance over the last 6 months; I can then confirm Plus and Standard eligibility.",
+    "verdict": "correct",
+    "prompt_tokens": 1082,
+    "completion_tokens": 1098,
+    "seconds": 11.1
+  },
+  {
+    "id": "B2",
+    "group": "B",
+    "question": "I withdrew 2,000 lei from another bank's ATM in Romania in December 2025, and again in February 2026. Did the fee change, and by how much?",
+    "expected": "Yes. 2025: 1.00 + 0.20% = 5.00 lei. 2026: 1.50 + 0.20% = 5.50 lei. A 0.50 lei increase, from the fixed part only.",
+    "why_hard": "Needs BOTH the current and the superseded fee schedule, plus arithmetic. The status filter that fixes every other version question blocks this one.",
+    "expected_sources": [
+      "fee-schedule-2025",
+      "fee-schedule-2026"
+    ],
+    "retrieved_sources": [
+      "daily-limits-2026",
+      "card-eligibility",
+      "fee-schedule-2026",
+      "daily-limits-2026",
+      "fee-schedule-2026",
+      "card-eligibility"
+    ],
+    "sources_found": [
+      "fee-schedule-2026"
+    ],
+    "sources_missing": [
+      "fee-schedule-2025"
+    ],
+    "top_score": 0.5542,
+    "nothing_relevant": false,
+    "answer": "Yes. The current 2026 fee for withdrawals at another bank\u2019s ATM in Romania is 1.50 lei + 0.20% of the amount; the fixed part \u201cwas 1.00\u201d previously [5].  \n\nOn a 2,000\u2011lei withdrawal that means December 2025 fee would have been 1.00 + 0.20%\u00b72,000 = 5.00 lei, and February 2026 fee is 1.50 + 0.20%\u00b72,000 = 5.50 lei \u2014 an increase of 0.50 lei [5].",
+    "verdict": "correct, sources incomplete",
+    "prompt_tokens": 939,
+    "completion_tokens": 649,
+    "seconds": 7.5
+  },
+  {
+    "id": "B3",
+    "group": "B",
+    "question": "My card was stolen. The thief spent 900 lei before I reported it and another 400 lei after. How much of that am I liable for?",
+    "expected": "300 lei. Pre-report loss is capped at 300 lei absent gross negligence; everything after the report is the bank's liability.",
+    "why_hard": "Retrieval then arithmetic against a cap, and a condition (gross negligence) that has to be checked before the cap applies.",
+    "expected_sources": [
+      "fraud-prevention",
+      "lost-or-stolen-card"
+    ],
+    "retrieved_sources": [
+      "lost-or-stolen-card",
+      "fraud-prevention",
+      "lost-or-stolen-card",
+      "lost-or-stolen-card"
+    ],
+    "sources_found": [
+      "fraud-prevention",
+      "lost-or-stolen-card"
+    ],
+    "sources_missing": [],
+    "top_score": 0.7338,
+    "nothing_relevant": false,
+    "answer": "Assuming you did not act fraudulently or with gross negligence, your liability is capped at 300 lei for the 900\u2011lei of transactions made before you reported the card; the bank is liable for the 600 lei remainder of those pre\u2011report transactions plus the full 400 lei spent after the report. So you would owe 300 lei and the bank would cover 1,000 lei [1][2].\n\nIf you did act fraudulently or with gross negligence (for example, writing the PIN on the card or keeping it in the same wallet, or approving a 3\u2011D Secure prompt you shouldn\u2019t have), you would be liable for the full amount \u2014 tell me whether any of those apply if you\u2019re unsure so I can confirm next steps [1][2].",
+    "verdict": "correct",
+    "prompt_tokens": 697,
+    "completion_tokens": 618,
+    "seconds": 8.5
+  },
+  {
+    "id": "B4",
+    "group": "B",
+    "question": "I am 16. Can I get a card I can use for online shopping and add to Google Pay, and what do I have to do first?",
+    "expected": "Yes \u2014 a Standard Debit card from age 14, but the online payment channel is disabled by default and a parent or guardian must enable it in branch. The card must then be activated before it can be added to a wallet; adding it to a wallet does not activate it.",
+    "why_hard": "Three documents, and a condition in the first one changes what the other two mean.",
+    "expected_sources": [
+      "card-activation",
+      "card-eligibility",
+      "digital-wallets"
+    ],
+    "retrieved_sources": [
+      "digital-wallets",
+      "card-eligibility",
+      "digital-wallets",
+      "virtual-cards",
+      "card-activation",
+      "virtual-cards"
+    ],
+    "sources_found": [
+      "card-activation",
+      "card-eligibility",
+      "digital-wallets"
+    ],
+    "sources_missing": [],
+    "top_score": 0.5413,
+    "nothing_relevant": false,
+    "answer": "Yes. At 16 you can have our Libra Standard Debit card, but online payments are disabled by default for customers aged 14\u201317 \u2014 a parent or guardian must enable the online payment channel in branch before you can use the card for online shopping (and before virtual-card features that require online payments are available) [2][6].\n\nBefore adding the card to Google Pay you must activate it \u2014 adding to a wallet does not activate the card. Once the card is activated you can add it either from the Libra Assist Mobile app (Cards \u2192 the card \u2192 Add to Apple/Google Pay) or from the Google Pay app by scanning the card and confirming with the code sent to your registered phone number; the app route is faster and doesn\u2019t require the plastic to be to hand [1][5].",
+    "verdict": "correct",
+    "prompt_tokens": 774,
+    "completion_tokens": 683,
+    "seconds": 8.5
+  },
+  {
+    "id": "B5",
+    "group": "B",
+    "question": "I want to close my Gold Credit card. What has to happen first, and will the holder of my supplementary card be told?",
+    "expected": "The full balance including accrued interest must be settled, recurring payments will fail, pending transactions still settle, and it must be done in branch or in writing. The supplementary card closes automatically and the bank does NOT notify its holder.",
+    "why_hard": "Two documents, and the interesting half of the answer \u2014 the silence toward the supplementary holder \u2014 is a negative fact stated in only one of them.",
+    "expected_sources": [
+      "card-closure",
+      "supplementary-cards"
+    ],
+    "retrieved_sources": [
+      "supplementary-cards",
+      "card-closure",
+      "card-closure",
+      "supplementary-cards",
+      "supplementary-cards",
+      "supplementary-cards"
+    ],
+    "sources_found": [
+      "card-closure",
+      "supplementary-cards"
+    ],
+    "sources_missing": [],
+    "top_score": 0.6454,
+    "nothing_relevant": false,
+    "answer": "Before you can close a Gold Credit card you need to check and resolve four things in this order: recurring payments (list merchants billing the card in the last three months and notify them their payments will fail), pending authorised transactions (these will still settle after closure), and the outstanding balance \u2014 for a Gold Credit card the full balance including accrued interest must be paid before the card contract can end (a credit card cannot be closed with a balance outstanding). Also note a credit card can only be closed in branch or in writing [2][3].\n\nClosing the main card automatically closes every supplementary card on it, and the bank does not notify supplementary holders \u2014 the main cardholder must tell them themselves [1][2].",
+    "verdict": "correct",
+    "prompt_tokens": 864,
+    "completion_tokens": 664,
+    "seconds": 7.9
+  },
+  {
+    "id": "C1",
+    "group": "C",
+    "question": "What is the interest rate on your student loans?",
+    "expected": "A refusal. Libra Bank's card knowledge base says nothing about student loans; a rate here would be invented.",
+    "why_hard": null,
+    "expected_sources": [],
+    "retrieved_sources": [],
+    "sources_found": [],
+    "sources_missing": [],
+    "top_score": null,
+    "nothing_relevant": true,
+    "answer": "I don\u2019t have any bank documents about student loan interest rates in the knowledge base \u2014 the search returned no relevant passages, so I can\u2019t provide the interest rate or related rate details. Missing: any passage showing current rates, rate schedules, product names (e.g., private vs. refinance), or APR policy.\n\nIf helpful, you can ask for one of these specific items instead: the current interest rates for each student\u2011loan product (name the product if you know it), whether rates are fixed or variable, the APR/rate schedule, or where to find the live rate sheet or product page. You can also provide the internal document or a link and I\u2019ll extract the rate details.",
+    "verdict": "refused correctly",
+    "prompt_tokens": 235,
+    "completion_tokens": 597,
+    "seconds": 7.2
+  },
+  {
+    "id": "C2",
+    "group": "C",
+    "question": "How much does a SWIFT transfer to the United States cost?",
+    "expected": "A refusal. The corpus covers card fees only; account transfer pricing is not in it.",
+    "why_hard": null,
+    "expected_sources": [],
+    "retrieved_sources": [],
+    "sources_found": [],
+    "sources_missing": [],
+    "top_score": null,
+    "nothing_relevant": true,
+    "answer": "The bank's knowledge base returned no passages about SWIFT transfer fees to the United States, so I don\u2019t have any document-backed fee information to share. I can\u2019t answer from general knowledge or invent rates.\n\nIf you want a precise, document-backed answer, please ask for the bank\u2019s international payments / fees schedule or request a quote from customer service and provide: sending account type, currency and amount, whether you want fees borne by sender/beneficiary/shared (OUR/BEN/SHA), and whether you need same\u2011day/priority processing\u2014those details determine the exact charge.",
+    "verdict": "refused correctly",
+    "prompt_tokens": 238,
+    "completion_tokens": 703,
+    "seconds": 7.3
+  },
+  {
+    "id": "C3",
+    "group": "C",
+    "question": "What is the early repayment fee on a Libra mortgage during the fixed-rate period?",
+    "expected": "A refusal. Mortgages are outside this corpus entirely \u2014 and this is the example from the assignment brief, which makes it a good trap: it sounds exactly like a question a bank assistant should answer.",
+    "why_hard": null,
+    "expected_sources": [],
+    "retrieved_sources": [
+      "fee-schedule-2026",
+      "fee-schedule-2026",
+      "virtual-cards",
+      "fee-schedule-2026",
+      "card-eligibility",
+      "credit-card-repayment"
+    ],
+    "sources_found": [],
+    "sources_missing": [],
+    "top_score": 0.5755,
+    "nothing_relevant": false,
+    "answer": "The documents you provided only cover card fees and card policies (late payment fees, monthly maintenance, cash withdrawal fees, virtual card rules, eligibility and credit-card repayment methods) and do not include any mortgage terms or an early\u2011repayment fee schedule [1][2][3][4][5][6].\n\nTo answer your question I need the mortgage product terms or the bank's mortgage fee schedule that state the early\u2011repayment (prepayment) charge for the fixed\u2011rate period, or the specific mortgage product name and year so I can look it up.",
+    "verdict": "refused correctly",
+    "prompt_tokens": 778,
+    "completion_tokens": 571,
+    "seconds": 6.2
+  }
+]

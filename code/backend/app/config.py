@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     qdrant_collection: str = "libra_rag"
 
     # --- chunking defaults (overridable per request) ------------------------
-    chunk_strategy: str = "dynamic"        # static | dynamic | sentence | semantic
+    chunk_strategy: str = "dynamic"        # static | dynamic | sentence | semantic | markdown
     chunk_size: int = 500                  # target chunk size, characters
     chunk_overlap: int = 80                # characters carried over between chunks
     sentences_per_chunk: int = 3           # for the 'sentence' strategy
@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     # --- retrieval / generation defaults ------------------------------------
     top_k: int = 4
+    # Assignment 3, part 5. Defaults are off so the course behaviour is unchanged
+    # until a request asks for them; the loader and the console turn them on.
+    retrieval_min_score: float = 0.0       # 0 disables the floor; 0.30 is the tuned value
+    retrieval_hybrid: bool = False         # keyword arm fused with the vector arm (RRF)
+    retrieval_dedup: bool = False          # collapse near-identical chunks
+    retrieval_current_only: bool = False   # shorthand for filters={"status": "current"}
     llm_temperature: float = 0.2
     llm_max_tokens: int = 2500   # reasoning models spend part of this budget thinking
 

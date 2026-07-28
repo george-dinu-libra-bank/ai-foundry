@@ -6,12 +6,43 @@ the pipeline, each able to reveal its own raw JSON.
 
 | Screen | Shows | Endpoints |
 |---|---|---|
-| **Chat** | The assistant: persona switch, RAG toggle, local/Foundry lane, retrieved passages with scores, and the exact prompt sent | `/ask` |
+| **Chat** | The assistant: multi-turn conversation, persona switch, RAG toggle, local/Foundry lane, **which documents grounded the answer**, honest failure, live retrieval dials, and the exact prompt sent | `/ask` |
 | **Knowledge** | Paste a document, compare the four chunking strategies, then embed and store | `/chunk`, `/ingest`, `/collection` |
 | **Retrieval** | A query, its embedding, and the ranked hits with cosine scores | `/search` |
 | **Agents** | Every agent and **where it can run**, the system prompt its JSON produces, deploy/remove in Foundry | `/agents`, `/agents/{name}/deploy`, `/agents/hosted` |
 | **Tools** | The plain web scraper with its warnings; text-to-speech; speech-to-text | `/tools/*` |
 | **Status** | Health, the Azure environment, live model deployments, configuration with secrets masked | `/health`, `/azure`, `/config` |
+
+## The Chat screen (Assignment 3)
+
+Four things it does that an API explorer does not:
+
+**Multi-turn, held here.** `/ask` is stateless and remembers nothing, so the transcript
+lives in this component and the last **4 exchanges** (each answer truncated to 400
+characters) are replayed in front of the new question. That is what makes *"and what does
+that cost?"* resolve. The window is deliberately small: the context budget belongs to
+retrieved passages, not to a growing transcript. The **memory** checkbox turns it off, so
+the difference is demonstrable rather than asserted.
+
+**Sources, named.** A score attached to an anonymous block of text says nothing about
+whether the *right* document was used. Every grounded answer lists the document titles
+that backed it, and each passage shows its title, cosine score, effective date, version,
+`superseded` if it is, and `exact match` when the keyword arm of hybrid search found it.
+
+**Honest failure.** When retrieval returns nothing above the score floor, the turn is
+labelled *"Nothing relevant found"* above the answer, with the floor and filters that
+produced it — never a blank, and never a refusal that reads like a thin answer. When
+passages *were* retrieved but the agent declined to stretch them into an answer, that is
+labelled differently, because it is a different event. Ask *"What is the interest rate on
+your student loans?"* to see the first and *"What is the early repayment fee on a Libra
+mortgage?"* to see the second.
+
+**Retrieval dials, live.** The **retrieval** button exposes the score floor, the
+`status: current` filter, hybrid search and dedup. Each defaults to the calibrated value
+from the backend's `.env`; setting one explicitly overrides it for that question. Turn
+the filter off and ask about ATM limits to watch the 2025 document come back and compete
+with the 2026 one — the improvements in [NOTES.md](../../NOTES.md) are meant to be
+switched off in front of a reviewer.
 
 ## Where an agent can run
 
